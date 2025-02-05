@@ -5,6 +5,7 @@ import "../node_modules/bootstrap/dist/css/bootstrap.min.css";
 import { useForm } from "react-hook-form";
 import { ErrorMessage } from "@hookform/error-message";
 import { Modal } from "bootstrap";
+import ReactLoading from "react-loading";
 
 const API_BASE = import.meta.env.VITE_BASE_URL;
 const API_PATH = import.meta.env.VITE_API_PATH;
@@ -14,7 +15,10 @@ function App() {
   const [cartData, setCartData] = useState(null);
   const [tempProduct, setTempProduct] = useState(null);
   const [qtySelect, setQtySelect] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isComponentLoading, setIsComponentLoading] = useState(false);
   const productModalRef = useRef(null);
+
   useEffect(() => {
     new Modal(productModalRef.current, { backdrop: false });
     getProduct();
@@ -26,30 +30,32 @@ function App() {
 
   const getProduct = async () => {
     try {
+      setIsLoading(true);
       const res = await axios.get(`${API_BASE}/api/${API_PATH}/products/all`);
       setProductData(res.data.products);
+      setIsLoading(false);
     } catch (error) {
       alert(error.response.data.message);
+    } finally {
+      setIsLoading(false);
     }
   };
   const getCart = async () => {
     try {
       const res = await axios.get(`${API_BASE}/api/${API_PATH}/cart`);
       setCartData(res.data.data);
-      console.log(res.data.data);
-      console.log(cartData?.carts.length === 0);
     } catch (error) {
       alert(error.response.data.message);
-    }
+    } 
   };
   const handleProductBtn = (productItem) => {
     setTempProduct(productItem);
     openModal();
   };
-  const handleModalBtn = async (id,qty) => {
-    await addCart(id,qty);
+  const handleModalBtn = async (id, qty) => {
+    await addCart(id, qty);
     closeModal();
-  }
+  };
   const openModal = () => {
     let modal = Modal.getInstance(productModalRef.current);
     modal.show();
@@ -61,31 +67,42 @@ function App() {
 
   const addCart = async (id, qty = 1) => {
     try {
-      const res = await axios.post(`${API_BASE}/api/${API_PATH}/cart`, {
+      setIsComponentLoading(true);
+      await axios.post(`${API_BASE}/api/${API_PATH}/cart`, {
         data: {
           product_id: id,
           qty: Number(qty),
         },
       });
-      getCart();
+      await getCart();
+      setIsComponentLoading(false);
     } catch (error) {
       alert(error.response.data.message);
+    } finally {
+      setIsComponentLoading(false);
     }
   };
   const delCartItem = async (id) => {
     try {
-      const res = await axios.delete(`${API_BASE}/api/${API_PATH}/cart/${id}`);
-      getCart();
+      setIsComponentLoading(true);
+      res = await axios.delete(`${API_BASE}/api/${API_PATH}/cart/${id}`);
+      await getCart();
+      setIsComponentLoading(false);
     } catch (error) {
       alert(error.response.data.message);
+    } finally {
+      setIsComponentLoading(false);
     }
   };
   const delCarts = async () => {
     try {
-      const res = await axios.delete(`${API_BASE}/api/${API_PATH}/carts`);
-      getCart();
+      setIsLoading(true);
+      await axios.delete(`${API_BASE}/api/${API_PATH}/carts`);
+      await getCart();
     } catch (error) {
       alert(error.response.data.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -99,6 +116,7 @@ function App() {
   const onSubmit = async (formData) => {
     const { name, email, tel, address, message } = formData;
     try {
+      setIsLoading(true);
       const res = await axios.post(`${API_BASE}/api/${API_PATH}/order`, {
         data: {
           user: {
@@ -112,14 +130,35 @@ function App() {
       });
       console.log(res);
       reset();
-      getCart();
+      await getCart();
+      setIsLoading(false);
     } catch (error) {
       alert(error);
+    } finally {
+      setIsLoading(false);
     }
   };
   return (
     <div id="app">
       <div className="container">
+        {isLoading && (
+          <div
+            className="d-flex justify-content-center align-items-center"
+            style={{
+              position: "fixed",
+              inset: 0,
+              backgroundColor: "rgba(255,255,255,0.3)",
+              zIndex: 1000,
+            }}
+          >
+            <ReactLoading
+              type="spinningBubbles"
+              color="black"
+              height={"100px"}
+              width={"100px"}
+            />
+          </div>
+        )}
         <div className="mt-4">
           <div
             ref={productModalRef}
@@ -157,7 +196,6 @@ function App() {
                   <div className="input-group align-items-center">
                     <label htmlFor="qtySelect">數量：</label>
                     <select
-                      value={qtySelect}
                       onChange={(e) => setQtySelect(e.target.value)}
                       id="qtySelect"
                       className="form-select"
@@ -177,8 +215,12 @@ function App() {
                     onClick={() => {
                       handleModalBtn(tempProduct.id, qtySelect);
                     }}
+                    disabled={isComponentLoading}
                   >
                     加入購物車
+                    {isComponentLoading && (
+                      <i className="fas fa-spinner fa-pulse ms-1"></i>
+                    )}
                   </button>
                 </div>
               </div>
@@ -195,7 +237,6 @@ function App() {
             </thead>
             <tbody>
               {productData?.map((productItem) => {
-                let qty = 0;
                 return (
                   <tr key={productItem.id}>
                     <td style={{ width: "200px" }}>
@@ -220,17 +261,25 @@ function App() {
                           type="button"
                           className="btn btn-outline-secondary"
                           onClick={() => handleProductBtn(productItem)}
+                          disabled={isComponentLoading}
                         >
-                          <i className="fas fa-spinner fa-pulse"></i>
                           查看更多
+                          {isComponentLoading && (
+                            <i className="fas fa-spinner fa-pulse ms-1"></i>
+                          )}
                         </button>
                         <button
                           type="button"
                           className="btn btn-outline-danger"
-                          onClick={() => {addCart(productItem.id)}}
+                          disabled={isComponentLoading}
+                          onClick={() => {
+                            addCart(productItem.id);
+                          }}
                         >
-                          <i className="fas fa-spinner fa-pulse"></i>
                           加到購物車
+                          {isComponentLoading && (
+                            <i className="fas fa-spinner fa-pulse ms-1"></i>
+                          )}
                         </button>
                       </div>
                     </td>
