@@ -46,7 +46,7 @@ function App() {
       setCartData(res.data.data);
     } catch (error) {
       alert(error.response.data.message);
-    } 
+    }
   };
   const handleProductBtn = (productItem) => {
     setTempProduct(productItem);
@@ -85,7 +85,7 @@ function App() {
   const delCartItem = async (id) => {
     try {
       setIsComponentLoading(true);
-      res = await axios.delete(`${API_BASE}/api/${API_PATH}/cart/${id}`);
+      axios.delete(`${API_BASE}/api/${API_PATH}/cart/${id}`);
       await getCart();
       setIsComponentLoading(false);
     } catch (error) {
@@ -99,6 +99,23 @@ function App() {
       setIsLoading(true);
       await axios.delete(`${API_BASE}/api/${API_PATH}/carts`);
       await getCart();
+    } catch (error) {
+      alert(error.response.data.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  const putCartItem = async (id, qty) => {
+    try {
+      setIsLoading(true);
+      await axios.put(`${API_BASE}/api/${API_PATH}/cart/${id}`, {
+        data: {
+          product_id: id,
+          qty: Number(qty),
+        },
+      });
+      await getCart();
+      setIsLoading(false);
     } catch (error) {
       alert(error.response.data.message);
     } finally {
@@ -288,7 +305,7 @@ function App() {
               })}
             </tbody>
           </table>
-
+          {/* 購物車 */}
           {cartData?.carts.length !== 0 && (
             <>
               <div className="text-end">
@@ -323,7 +340,27 @@ function App() {
                           </button>
                         </th>
                         <th>{cartItem.product.title}</th>
-                        <th style={{ width: "150px" }}>{cartItem.qty}</th>
+                        <th style={{ width: "150px" }}>
+                          <button
+                            type="button"
+                            className="btn btn-primary me-2 w-25"
+                            onClick={() =>
+                              putCartItem(cartItem.id, cartItem.qty - 1)
+                            }
+                          >
+                            -
+                          </button>
+                          {cartItem.qty}
+                          <button
+                            type="button"
+                            className="btn btn-primary ms-2 w-25"
+                            onClick={() =>
+                              putCartItem(cartItem.id, cartItem.qty + 1)
+                            }
+                          >
+                            +
+                          </button>
+                        </th>
                         <th>{cartItem.product.origin_price}</th>
                       </tr>
                     );
@@ -349,6 +386,7 @@ function App() {
             </>
           )}
         </div>
+        {/* 訂單表單 */}
         <div className="my-5 row justify-content-center">
           <form className="col-md-6" onSubmit={handleSubmit(onSubmit)}>
             <div className="mb-3">
@@ -443,9 +481,9 @@ function App() {
               <ErrorMessage
                 errors={errors}
                 name="address"
-                render={({ message }) => (
-                  <p className="form-error text-start">{message}</p>
-                )}
+                render={(
+                  { message } //在errorMsg內傳給render一個message的props，errorMsg就可以透過提供的這段函式解構並且輸出訊息
+                ) => <p className="form-error text-start">{message}</p>}
               />
             </div>
 
