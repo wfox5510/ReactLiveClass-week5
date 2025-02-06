@@ -344,8 +344,9 @@ function App() {
                           <button
                             type="button"
                             className="btn btn-primary me-2 w-25"
-                            onClick={() =>
-                              putCartItem(cartItem.id, cartItem.qty - 1)
+                            disabled={cartItem.qty <= 1}
+                            onClick={() => 
+                              cartItem.qty > 1 && putCartItem(cartItem.id, cartItem.qty - 1)
                             }
                           >
                             -
